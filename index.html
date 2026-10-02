@@ -1,0 +1,264 @@
+نام مخزن: **`botriz.tabriz`**؛ نام برنامه: **Botriz**.
+
+فایل‌های سایت را در ریشهٔ مخزن GitHub بساز؛ مسیر هرکدام کنار نامش آمده. هر بلوک یک فایل جداست و از دکمهٔ کپی همان بلوک استفاده کن. **کلید API را داخل هیچ‌کدام از فایل‌های GitHub نگذار.**
+
+GitHub Pages فقط سایت را اجرا می‌کند؛ برای پاسخ هوشمند، سرور جداگانه لازم است. بعد از بارگذاری فایل‌ها، مراحل GitHub و سپس مراحل ترمینال را به ترتیب انجام بده.
+
+## فایل ۱ — `index.html` — ریشهٔ مخزن
+
+```html
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#111827">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <title>Botriz</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; background: #0b1020; color: #f3f4f6;
+      font-family: system-ui, Tahoma, sans-serif;
+    }
+    main { max-width: 760px; margin: auto; padding: 12px; }
+    section {
+      background: #151c2e; border: 1px solid #28334c;
+      border-radius: 16px; padding: 14px; margin-bottom: 12px;
+    }
+    h1, h2 { margin: 0 0 10px; }
+    h1 { font-size: 1.4rem; }
+    h2 { font-size: 1.05rem; }
+    p { color: #b8c2d8; line-height: 1.8; }
+    #chat {
+      height: 40vh; min-height: 220px; overflow-y: auto;
+      background: #0b1020; border-radius: 12px; padding: 10px;
+    }
+    .bubble {
+      max-width: 92%; padding: 10px 12px; border-radius: 12px;
+      margin: 8px 0; white-space: pre-wrap; overflow-wrap: anywhere;
+      line-height: 1.7;
+    }
+    .user { background: #244a7a; margin-right: auto; }
+    .assistant { background: #222c42; margin-left: auto; }
+    .row { display: flex; gap: 8px; margin-top: 10px; }
+    input, button {
+      font: inherit; border-radius: 10px; padding: 11px;
+    }
+    input {
+      min-width: 0; flex: 1; color: white;
+      background: #0b1020; border: 1px solid #35415b;
+    }
+    button { border: 0; color: white; background: #5865f2; cursor: pointer; }
+    button.secondary { background: #35415b; }
+    button.danger { background: #8c3442; }
+    .entry {
+      display: flex; justify-content: space-between; align-items: center;
+      gap: 8px; padding: 8px 0; border-bottom: 1px solid #28334c;
+      overflow-wrap: anywhere;
+    }
+    .entry span { flex: 1; }
+    .entry button { padding: 6px 9px; }
+    .small { font-size: .88rem; }
+    @media (max-width: 480px) {
+      .row { flex-wrap: wrap; }
+      .row button { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+<main>
+  <section>
+    <h1>Botriz</h1>
+    <p>
+      ثبت آموزش: <b>یاد بگیر: ...</b><br>
+      حذف آموزش: <b>فراموش کن: ...</b><br>
+      گفتگو و حافظه در همین مرورگر ذخیره می‌شوند.
+    </p>
+    <div id="chat" aria-live="polite"></div>
+    <form id="chatForm" class="row">
+      <input id="message" autocomplete="off" placeholder="پیامت را بنویس…">
+      <button type="submit">ارسال</button>
+    </form>
+  </section>
+
+  <section>
+    <h2>تنظیم اتصال هوش مصنوعی</h2>
+    <p class="small">
+      نشانی سرور و رمز دسترسی را از میزبان سرور بگیر. این اطلاعات در مرورگر ذخیره می‌شوند، نه در مخزن GitHub.
+    </p>
+    <form id="settingsForm">
+      <input id="serverUrl" placeholder="نشانی سرور، مثلاً https://example.onrender.com">
+      <div style="height:8px"></div>
+      <input id="accessToken" type="password" autocomplete="off"
+             placeholder="رمز دسترسی Botriz">
+      <div class="row">
+        <button type="submit">ذخیرهٔ تنظیمات</button>
+        <button id="forgetToken" class="secondary" type="button">پاک‌کردن تنظیمات</button>
+      </div>
+    </form>
+    <p id="settingsStatus" class="small"></p>
+  </section>
+
+  <section>
+    <h2>حافظه</h2>
+    <div id="memories"></div>
+    <button id="exportButton" class="secondary">خروجی گرفتن</button>
+  </section>
+
+  <section>
+    <h2>فهرست کارها</h2>
+    <p>این نسخه کارها را ثبت می‌کند؛ خودش وارد شبکه‌های اجتماعی نمی‌شود.</p>
+    <form id="taskForm" class="row">
+      <input id="taskInput" placeholder="مثلاً: آماده‌کردن متن پست">
+      <button type="submit">ثبت کار</button>
+    </form>
+    <div id="tasks"></div>
+  </section>
+
+  <section>
+    <button id="clearButton" class="danger">پاک‌کردن گفتگو، حافظه و کارها</button>
+  </section>
+</main>
+
+<script>
+  const $ = id => document.getElementById(id);
+  const load = (key, fallback) => {
+    try { return JSON.parse(localStorage.getItem(key)) ?? fallback; }
+    catch { return fallback; }
+  };
+  const save = (key, value) =>
+    localStorage.setItem(key, JSON.stringify(value));
+
+  let history = load("botriz_history", []);
+  let memory = load("botriz_memory", []);
+  let tasks = load("botriz_tasks", []);
+  const settings = load("botriz_settings", { url: "", token: "" });
+
+  $("serverUrl").value = settings.url || "";
+  $("accessToken").value = settings.token || "";
+
+  function bubble(text, role) {
+    const div = document.createElement("div");
+    div.className = "bubble " + role;
+    div.textContent = text;
+    $("chat").appendChild(div);
+  }
+
+  function drawChat() {
+    const box = $("chat");
+    box.replaceChildren();
+    if (!history.length) {
+      bubble("سلام، من Botriz هستم. برای ثبت یک آموزش بنویس: یاد بگیر: ...", "assistant");
+      return;
+    }
+    history.forEach(item => bubble(item.text, item.role));
+    box.scrollTop = box.scrollHeight;
+  }
+
+  function drawList(id, items, remove) {
+    const box = $(id);
+    box.replaceChildren();
+    if (!items.length) {
+      box.textContent = "موردی ثبت نشده است.";
+      return;
+    }
+    items.forEach((text, index) => {
+      const row = document.createElement("div");
+      row.className = "entry";
+      const label = document.createElement("span");
+      label.textContent = text;
+      const button = document.createElement("button");
+      button.className = "danger";
+      button.textContent = "حذف";
+      button.onclick = () => remove(index);
+      row.append(label, button);
+      box.appendChild(row);
+    });
+  }
+
+  function drawMemory() {
+    drawList("memories", memory, index => {
+      memory.splice(index, 1);
+      save("botriz_memory", memory);
+      drawMemory();
+    });
+  }
+
+  function drawTasks() {
+    drawList("tasks", tasks, index => {
+      tasks.splice(index, 1);
+      save("botriz_tasks", tasks);
+      drawTasks();
+    });
+  }
+
+  function addHistory(role, text) {
+    history.push({ role, text });
+    history = history.slice(-100);
+    save("botriz_history", history);
+    drawChat();
+  }
+
+  $("settingsForm").addEventListener("submit", event => {
+    event.preventDefault();
+    settings.url = $("serverUrl").value.trim().replace(/\/+$/, "");
+    settings.token = $("accessToken").value.trim();
+    save("botriz_settings", settings);
+    $("settingsStatus").textContent = "تنظیمات در همین مرورگر ذخیره شد.";
+  });
+
+  $("forgetToken").onclick = () => {
+    settings = { url: "", token: "" };
+    save("botriz_settings", settings);
+    $("serverUrl").value = "";
+    $("accessToken").value = "";
+    $("settingsStatus").textContent = "تنظیمات پاک شد.";
+  };
+
+  $("chatForm").addEventListener("submit", async event => {
+    event.preventDefault();
+    const text = $("message").value.trim();
+    if (!text) return;
+
+    $("message").value = "";
+
+    if (text.startsWith("یاد بگیر:")) {
+      const fact = text.slice("یاد بگیر:".length).trim();
+      addHistory("user", text);
+      if (fact && !memory.includes(fact)) memory.push(fact);
+      save("botriz_memory", memory);
+      drawMemory();
+      addHistory("assistant", fact
+        ? "ثبت شد؛ این مورد در حافظهٔ همین مرورگر ذخیره شد."
+        : "بعد از «یاد بگیر:» موردی برای ثبت بنویس.");
+      return;
+    }
+
+    if (text.startsWith("فراموش کن:")) {
+      const fact = text.slice("فراموش کن:".length).trim();
+      addHistory("user", text);
+      memory = memory.filter(item => item !== fact);
+      save("botriz_memory", memory);
+      drawMemory();
+      addHistory("assistant", "اگر آن مورد در حافظه بود، حذف شد.");
+      return;
+    }
+
+    const priorHistory = history.slice(-16);
+    addHistory("user", text);
+
+    const pending = { role: "assistant", text: "در حال دریافت پاسخ…" };
+    history.push(pending);
+    drawChat();
+
+    try {
+      const currentSettings = load("botriz_settings", { url: "", token: "" });
+      if (!currentSettings.url || !currentSettings.token) {
+        throw new Error("ابتدا نشانی سرور و رمز دسترسی را در تنظیمات وارد کن.");
+      }
+
+      const response = await fetch(currentSettings.url + "/api/chat", {
+        method: "POST",
+        headers: {
+          "Content
